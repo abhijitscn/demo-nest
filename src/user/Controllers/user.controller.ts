@@ -13,7 +13,8 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { TechnologiesService } from 'src/services/tech.service';
-import { userService } from 'src/services/user.service';
+import { userService } from '../Services/user.service';
+import { IUsers } from '../Interfaces/user.interface';
 
 interface IAddUser {
   name: string;
@@ -28,7 +29,7 @@ let users = [];
 export class UserController {
   constructor(
     private tech: TechnologiesService,
-    private userService: userService,
+    private user: userService,
     @Inject('base_url') private url: string,
     @Inject('config') private conf: string,
   ) {
@@ -37,19 +38,10 @@ export class UserController {
   }
 
   @Get()
-  getAllUsers() {
+  getAllUsers(): { message?: string; users: IUsers[] } {
     console.log(this.tech.getTechnologies(), 'tech');
     console.log(this.url, 'url');
-    if (users.length > 0) {
-      return {
-        users: users,
-      };
-    } else {
-      return {
-        users: users,
-        message: 'No user found',
-      };
-    }
+    return this.user.getUsers();
   }
 
   @Get('/:id')
@@ -57,40 +49,21 @@ export class UserController {
     @Param() param: IPGetUser,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = users.find((u: any) => u.id === param.id);
-    if (user) {
-      res.statusCode = 200;
-      return user;
-    } else {
-      res.statusCode = 404;
-    }
+    return this.user.getUserById(res, param);
   }
 
   @Post('/add-user')
-  addNewUser(@Body() body: IAddUser) {
-    users.push({ ...body, id: Math.random().toString() });
-    return {
-      message: 'Data Saved Successfully',
-      data: users,
-    };
+  addNewUser(@Body() body: IAddUser): { message: string; data: IUsers[] } {
+    return this.user.handleAddNewUser(body);
   }
 
   @Put('/:id')
   updateUser(@Body() body: IAddUser, @Param() param: IPGetUser) {
-    const modUser = users.map((u: any) => {
-      if (u.id === param.id) {
-        return { ...u, name: body.name, age: body.age };
-      } else {
-        return { ...u };
-      }
-    });
-    users = modUser;
-    return { user: users, message: 'User Details Update Successfully ' };
+    return this.user.handleUpdateUser(body, param);
   }
 
   @Delete('/:id')
   deleteUser(@Param() param: IPGetUser) {
-    const modData = users.filter((u: any) => u.id !== param.id);
-    users = modData;
+    return this.user.handleDeleteUser(param);
   }
 }
